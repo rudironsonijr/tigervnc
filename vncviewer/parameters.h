@@ -48,7 +48,7 @@ extern rfb::IntParameter compressLevel;
 extern rfb::BoolParameter noJpeg;
 extern rfb::IntParameter qualityLevel;
 
-extern rfb::BoolParameter maximize;
+extern rfb::BoolParameter maximizeViewerWindow;
 extern rfb::BoolParameter fullScreen;
 extern rfb::StringParameter fullScreenMode;
 extern rfb::BoolParameter fullScreenAllMonitors; // deprecated
