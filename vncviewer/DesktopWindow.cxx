@@ -174,7 +174,7 @@ DesktopWindow::DesktopWindow(int w, int h, const char *name,
 #ifdef __APPLE__
   // On OS X we can do the maximize thing properly before the
   // window is showned. Other platforms handled further down...
-  if (maximize) {
+  if (maximizeViewerWindow) {
     int dummy;
     Fl::screen_work_area(dummy, dummy, w, h, geom_x, geom_y);
   }

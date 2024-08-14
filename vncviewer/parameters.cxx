@@ -103,7 +103,7 @@ IntParameter qualityLevel("QualityLevel",
                           "JPEG quality level. 0 = Low, 9 = High",
                           8);
 
-BoolParameter maximize("Maximize", "Maximize viewer window", false);
+BoolParameter maximizeViewerWindow("Maximize", "Maximize viewer window", false);
 BoolParameter fullScreen("FullScreen", "Enable full screen", false);
 StringParameter fullScreenMode("FullScreenMode", "Specify which monitors to use when in full screen. "
                                                  "Should be either Current, Selected or All",
