@@ -43,7 +43,7 @@ configure_file(Info.plist.in Info.plist)
 
 add_custom_target(dmg sh makemacapp
   DEPENDS vncviewer
-  SOURCES makemacapp)
+  SOURCES makemacapp.in)
 
 endif() # APPLE
 
