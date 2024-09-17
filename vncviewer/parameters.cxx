@@ -36,6 +36,7 @@
 #include <rfb/Exception.h>
 #include <rfb/LogWriter.h>
 #include <rfb/SecurityClient.h>
+#include <rfb/util.h>
 
 #include <FL/fl_utf8.h>
 
@@ -417,7 +418,7 @@ static void removeValue(const char* _name, HKEY* hKey) {
   }
 }
 
-void saveHistoryToRegKey(const vector<string>& serverHistory) {
+void saveHistoryToRegKey(const list<string>& serverHistory) {
   HKEY hKey;
   LONG res = RegCreateKeyExW(HKEY_CURRENT_USER,
                              L"Software\\TigerVNC\\vncviewer\\history", 0, nullptr,
@@ -432,9 +433,11 @@ void saveHistoryToRegKey(const vector<string>& serverHistory) {
   char indexString[3];
 
   try {
-    while(index < serverHistory.size() && index <= SERVER_HISTORY_SIZE) {
+    for (const string& entry : serverHistory) {
+      if (index > SERVER_HISTORY_SIZE)
+        break;
       snprintf(indexString, 3, "%d", index);
-      setKeyString(indexString, serverHistory[index].c_str(), &hKey);
+      setKeyString(indexString, entry.c_str(), &hKey);
       index++;
     }
   } catch (Exception& e) {
@@ -502,8 +505,9 @@ static void saveToReg(const char* servername) {
     throw rdr::SystemException(_("Failed to close registry key"), res);
 }
 
-void loadHistoryFromRegKey(vector<string>& serverHistory) {
+list<string> loadHistoryFromRegKey() {
   HKEY hKey;
+  list<string> serverHistory;
 
   LONG res = RegOpenKeyExW(HKEY_CURRENT_USER,
                            L"Software\\TigerVNC\\vncviewer\\history", 0,
@@ -511,7 +515,7 @@ void loadHistoryFromRegKey(vector<string>& serverHistory) {
   if (res != ERROR_SUCCESS) {
     if (res == ERROR_FILE_NOT_FOUND) {
       // The key does not exist, defaults will be used.
-      return;
+      return serverHistory;
     }
 
     throw rdr::SystemException(_("Failed to open registry key"), res);
@@ -542,6 +546,8 @@ void loadHistoryFromRegKey(vector<string>& serverHistory) {
   res = RegCloseKey(hKey);
   if (res != ERROR_SUCCESS)
     throw rdr::SystemException(_("Failed to close registry key"), res);
+
+  return serverHistory;
 }
 
 static void getParametersFromReg(VoidParameter* parameters[],
@@ -631,7 +637,7 @@ void saveViewerParameters(const char *filename, const char *servername) {
     
     const char* configDir = os::getvncconfigdir();
     if (configDir == nullptr)
-      throw Exception(_("Could not obtain the config directory path"));
+      throw Exception(_("Could not determine VNC config directory path"));
 
     snprintf(filepath, sizeof(filepath), "%s/default.tigervnc", configDir);
   } else {
@@ -640,9 +646,10 @@ void saveViewerParameters(const char *filename, const char *servername) {
 
   /* Write parameters to file */
   FILE* f = fopen(filepath, "w+");
-  if (!f)
-    throw Exception(_("Could not open \"%s\": %s"),
-                    filepath, strerror(errno));
+  if (!f) {
+    std::string msg = format(_("Could not open \"%s\""), filepath);
+    throw rdr::SystemException(msg.c_str(), errno);
+  }
 
   fprintf(f, "%s\n", IDENTIFIER_STRING);
   fprintf(f, "\n");
@@ -735,7 +742,7 @@ char* loadViewerParameters(const char *filename) {
 
     const char* configDir = os::getvncconfigdir();
     if (configDir == nullptr)
-      throw Exception(_("Could not obtain the config directory path"));
+      throw Exception(_("Could not determine VNC config directory path"));
 
     snprintf(filepath, sizeof(filepath), "%s/default.tigervnc", configDir);
   } else {
@@ -747,8 +754,8 @@ char* loadViewerParameters(const char *filename) {
   if (!f) {
     if (!filename)
       return nullptr; // Use defaults.
-    throw Exception(_("Could not open \"%s\": %s"),
-                    filepath, strerror(errno));
+    std::string msg = format(_("Could not open \"%s\""), filepath);
+    throw rdr::SystemException(msg.c_str(), errno);
   }
   
   int lineNr = 0;
@@ -761,8 +768,9 @@ char* loadViewerParameters(const char *filename) {
         break;
 
       fclose(f);
-      throw Exception(_("Failed to read line %d in file %s: %s"),
-                      lineNr, filepath, strerror(errno));
+      std::string msg = format(_("Failed to read line %d in "
+                                 "file \"%s\""), lineNr, filepath);
+      throw rdr::SystemException(msg.c_str(), errno);
     }
 
     if (strlen(line) == (sizeof(line) - 1)) {
